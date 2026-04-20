@@ -51,6 +51,23 @@ In the browser UI:
 - Check **Export as PDF** to generate a PDF file in `output/cover-letters/` and open it in a new browser tab, where you can download it from the PDF viewer.
 - Leave **Export as PDF** unchecked to display the generated cover letter text directly in the page, with a copy button for quick reuse.
 
+## PDF Customization
+
+When exporting as PDF, you can control:
+
+- **Style preset** — select in the form:
+  - *Modern*: Helvetica font, centered header
+  - *Classic*: Times New Roman, left-aligned header
+
+- **Fine-grained template overrides** — copy `config/pdf-template.example.json` to `.local/pdf-template.json` and customize fonts, sizes, margins, spacing, and alignment per section. Only include keys you want to override; the rest inherit from the selected style preset.
+
+  Example — change only the body font size:
+  ```json
+  { "body": { "size": 12 } }
+  ```
+
+  Available sections: `page` (margins, format), `header` (name), `contact`, `date`, `body`.
+
 ## Security
 
 This tool is **designed for local use only**. Before deploying or exposing to a network:

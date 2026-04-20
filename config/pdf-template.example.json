@@ -1,0 +1,51 @@
+{
+  "_comment": "Copy this to .local/pdf-template.json to customize PDF output. All values are optional — only include what you want to override. The style preset ('modern' or 'classic') is applied first, then these overrides are merged on top.",
+
+  "page": {
+    "format": "Letter",
+    "_comment_format": "Page size: 'Letter' (8.5x11in) or 'A4'",
+    "margins": {
+      "left": 1.0,
+      "top": 1.0,
+      "right": 1.0,
+      "bottom": 1.0
+    }
+  },
+
+  "header": {
+    "_comment": "Candidate name displayed at the top of the letter",
+    "font": "Helvetica",
+    "_comment_font": "Built-in fonts: 'Helvetica', 'Times', 'Courier'",
+    "size": 14,
+    "bold": true,
+    "align": "C",
+    "_comment_align": "'C' = centered, 'L' = left, 'R' = right"
+  },
+
+  "contact": {
+    "_comment": "Contact info line below the name",
+    "font": "Helvetica",
+    "size": 10,
+    "bold": false,
+    "align": "C"
+  },
+
+  "date": {
+    "_comment": "Date line below the header block",
+    "font": "Helvetica",
+    "size": 11,
+    "bold": false,
+    "spacing_before": 0.5,
+    "_comment_spacing_before": "Vertical gap (inches) between contact line and date",
+    "spacing_after": 0.3,
+    "_comment_spacing_after": "Vertical gap (inches) between date and letter body"
+  },
+
+  "body": {
+    "_comment": "Main letter text",
+    "font": "Helvetica",
+    "size": 11,
+    "line_height": 0.25,
+    "_comment_line_height": "Height per line in inches. 0.22 = tighter, 0.28 = more airy"
+  }
+}

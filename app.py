@@ -117,6 +117,19 @@ def generate_cover_letter(req: GenerateRequest, _: None = Depends(verify_api_key
     root = Path.cwd()
     cache_path = root / ".local" / "candidate-profile-cache.json"
     
+    # Load optional PDF template overrides
+    pdf_template: dict | None = None
+    pdf_template_path = root / ".local" / "pdf-template.json"
+    if pdf_template_path.exists():
+        import json
+        try:
+            raw = json.loads(pdf_template_path.read_text(encoding="utf-8"))
+            # Strip comment keys before use
+            pdf_template = {k: v for k, v in raw.items() if not k.startswith("_")}
+            logger.info("Loaded PDF template overrides from .local/pdf-template.json")
+        except Exception as e:
+            logger.warning(f"Could not parse pdf-template.json: {e}")
+    
     try:
         logger.info("Building candidate profile...")
         profile = build_or_load_profile(paths, cache_path)
@@ -168,7 +181,8 @@ def generate_cover_letter(req: GenerateRequest, _: None = Depends(verify_api_key
                     output_dir=req.output_dir,
                     name=req.candidate_name,
                     contact=req.candidate_contact,
-                    style=req.template_style
+                    style=req.template_style,
+                    template=pdf_template,
                 )
             else:
                 out_dir_path = Path(req.output_dir) if req.output_dir else Path("output/cover-letters")
@@ -179,7 +193,9 @@ def generate_cover_letter(req: GenerateRequest, _: None = Depends(verify_api_key
                 download_url = _build_download_url(saved_target)
             logger.info(f"Document saved: {saved_target}")
         except Exception as e:
-            logger.warning(f"Failed to save document: {e}", exc_info=True)
+            logger.error(f"Failed to save document: {e}", exc_info=True)
+            if req.save_as_pdf:
+                raise HTTPException(status_code=500, detail=f"PDF generation failed: {e}")
             
     return {
         "letter": letter,
@@ -219,12 +235,10 @@ def download_generated_file(filename: str, _: None = Depends(verify_api_key)):
         raise HTTPException(status_code=404, detail="File not found")
 
     media_type, _ = mimetypes.guess_type(target.name)
-    content_disposition_type = "inline" if media_type == "application/pdf" else "attachment"
     return FileResponse(
         str(target),
         media_type=media_type or "application/octet-stream",
-        filename=target.name,
-        content_disposition_type=content_disposition_type,
+        content_disposition_type="inline",
     )
 
 @app.get("/")

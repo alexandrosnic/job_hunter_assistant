@@ -33,12 +33,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Toggle PDF fields visibility
     const pdfCheck = document.getElementById('exportPdfCheck');
     const pdfFields = document.getElementById('pdf-fields-container');
+    const pdfStyleRow = document.getElementById('pdf-style-row');
     if (pdfCheck) {
         pdfCheck.addEventListener('change', () => {
             if (pdfCheck.checked) {
                 pdfFields.classList.remove('hidden');
+                pdfStyleRow.classList.remove('hidden');
             } else {
                 pdfFields.classList.add('hidden');
+                pdfStyleRow.classList.add('hidden');
             }
         });
     }
@@ -81,6 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (localStorage.getItem('jh_contact')) document.getElementById('contactInput').value = localStorage.getItem('jh_contact');
     if (localStorage.getItem('jh_role')) document.getElementById('roleInput').value = localStorage.getItem('jh_role');
     if (localStorage.getItem('jh_outdir')) document.getElementById('outDirInput').value = localStorage.getItem('jh_outdir');
+    if (localStorage.getItem('jh_style')) document.getElementById('styleSelect').value = localStorage.getItem('jh_style');
     
     try {
         const savedSources = JSON.parse(localStorage.getItem('jh_sources'));
@@ -114,6 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const exportPdf = document.getElementById('exportPdfCheck').checked;
         const candidateName = document.getElementById('nameInput').value.trim() || "Jane Doe";
         const candidateContact = document.getElementById('contactInput').value.trim() || "jane.doe@example.com";
+        const templateStyle = document.getElementById('styleSelect')?.value || 'modern';
 
         const sources = Array.from(document.querySelectorAll('.source-path'))
                              .map(input => input.value.trim())
@@ -132,6 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Save to localStorage
         localStorage.setItem('jh_name', candidateName);
         localStorage.setItem('jh_contact', candidateContact);
+        localStorage.setItem('jh_style', templateStyle);
         localStorage.setItem('jh_role', role);
         localStorage.setItem('jh_outdir', outDir);
         localStorage.setItem('jh_sources', JSON.stringify(sources));
@@ -141,6 +147,11 @@ document.addEventListener('DOMContentLoaded', () => {
         loader.classList.remove('hidden');
         textResult.classList.add('hidden');
         resultMeta.classList.add('hidden');
+
+        // Open a blank tab now (synchronous, tied to the user's click).
+        // Browsers allow this; they block window.open inside async callbacks.
+        const pdfTab = exportPdf ? window.open('about:blank', '_blank') : null;
+        const hasDedicatedPdfTab = !!pdfTab && pdfTab !== window;
 
         try {
             const body = {
@@ -153,7 +164,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 output_dir: outDir,
                 save_as_pdf: exportPdf,
                 candidate_name: candidateName,
-                candidate_contact: candidateContact
+                candidate_contact: candidateContact,
+                template_style: templateStyle
             };
 
             const response = await fetch('/api/generate', {
@@ -175,13 +187,26 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (exportPdf) {
                 if (!data.saved_path || !data.download_url) {
+                    if (hasDedicatedPdfTab) pdfTab.close();
                     throw new Error('PDF was generated but no file was returned by the server.');
                 }
-
-                const pdfWindow = window.open(data.download_url, '_blank', 'noopener');
-                if (!pdfWindow) {
-                    window.location.href = data.download_url;
+                const absoluteDownloadUrl = new URL(data.download_url, window.location.origin).href;
+                if (hasDedicatedPdfTab) {
+                    try {
+                        // Minimize opener exposure after the window is created.
+                        pdfTab.opener = null;
+                        pdfTab.location.href = absoluteDownloadUrl;
+                        pdfTab.focus();
+                    } catch (e) {
+                        pdfTab.document.body.innerHTML = `<p style="font-family: sans-serif; padding: 1rem;">Could not auto-open PDF. <a href="${absoluteDownloadUrl}" target="_self">Click here to open it</a>.</p>`;
+                    }
                 }
+                // Always show a fallback link; if popups are blocked this is the safe path.
+                const tabMessage = hasDedicatedPdfTab
+                    ? 'PDF opened in a new tab.'
+                    : 'Popup blocked. Click to open PDF in a new tab:';
+                resultMeta.innerHTML = `${tabMessage} <a href="${absoluteDownloadUrl}" target="_blank" rel="noopener" style="color: var(--accent-color);">Open PDF</a>`;
+                resultMeta.classList.remove('hidden');
             } else {
                 letterOutput.textContent = data.letter || '';
                 textResult.classList.remove('hidden');

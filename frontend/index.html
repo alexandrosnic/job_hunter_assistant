@@ -86,6 +86,20 @@
                 </div>
             </div>
 
+            <div class="form-row" id="pdf-style-row">
+                <div class="form-group half">
+                    <label for="styleSelect">PDF Style</label>
+                    <select id="styleSelect">
+                        <option value="modern">Modern &mdash; Helvetica, centered header</option>
+                        <option value="classic">Classic &mdash; Times New Roman, left-aligned</option>
+                    </select>
+                </div>
+                <div class="form-group half">
+                    <label>&nbsp;</label>
+                    <div class="helper-text">Fine-tune fonts, sizes &amp; spacing in <code>.local/pdf-template.json</code> (copy from <code>config/pdf-template.example.json</code>).</div>
+                </div>
+            </div>
+
             <button type="submit" class="btn-primary" id="generate-btn">
                 <span class="btn-text">Generate Cover Letter</span>
                 <span class="loader hidden"></span>

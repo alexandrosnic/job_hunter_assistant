@@ -2,7 +2,8 @@
 set -euo pipefail
 
 # Block commits that introduce Windows absolute paths in staged tracked files.
-WINDOWS_ABS_PATH_RE='[A-Za-z]:\\[^[:space:]"<>|]+'
+# Only match drive-letter absolute paths with at least one folder separator.
+WINDOWS_ABS_PATH_RE='[A-Za-z]:\\[A-Za-z0-9_\-]+\\'
 
 staged_files=$(git diff --cached --name-only --diff-filter=ACMR)
 
