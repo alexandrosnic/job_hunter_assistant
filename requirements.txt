@@ -1,0 +1,10 @@
+pypdf==3.17.1
+python-docx==0.8.11
+fastapi==0.104.1
+uvicorn==0.24.0
+fpdf2==2.7.0
+python-dotenv==1.0.0
+
+# Optional LLM provider dependencies (install as needed)
+# openai>=1.0.0         # For OpenAI API support
+# anthropic>=0.10.0     # For Anthropic API support

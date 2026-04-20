@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Block commits that introduce Windows absolute paths in staged tracked files.
+WINDOWS_ABS_PATH_RE='[A-Za-z]:\\[^[:space:]"<>|]+'
+
+staged_files=$(git diff --cached --name-only --diff-filter=ACMR)
+
+if [[ -z "${staged_files}" ]]; then
+  exit 0
+fi
+
+violations=0
+
+while IFS= read -r file; do
+  [[ -z "${file}" ]] && continue
+
+  # Skip likely binary files.
+  if ! git show ":${file}" | grep -Iq .; then
+    continue
+  fi
+
+  if git show ":${file}" | grep -nE "${WINDOWS_ABS_PATH_RE}" >/tmp/precommit-path-check.txt; then
+    echo ""
+    echo "Blocked commit: Windows absolute path detected in staged file: ${file}"
+    cat /tmp/precommit-path-check.txt
+    violations=1
+  fi
+done <<< "${staged_files}"
+
+rm -f /tmp/precommit-path-check.txt
+
+if [[ ${violations} -ne 0 ]]; then
+  echo ""
+  echo "Use .local/config.json for local machine paths and keep tracked files path-agnostic."
+  exit 1
+fi
+
+exit 0

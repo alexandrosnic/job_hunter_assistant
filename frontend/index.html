@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Hunter Assistant</title>
+    <!-- Modern Typeface -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="blob-bg blob-1"></div>
+    <div class="blob-bg blob-2"></div>
+
+    <main class="glass-container">
+        <header>
+            <div class="logo">🎯</div>
+            <h1>Job Hunter Assistant</h1>
+            <p>Generate highly tailored cover letters from your local documents.</p>
+        </header>
+
+        <form id="job-form">
+            <div class="form-group">
+                <div class="tabs">
+                    <button type="button" class="tab active" data-target="job-url">Job URL</button>
+                    <button type="button" class="tab" data-target="job-desc">Job Description</button>
+                </div>
+                
+                <div class="tab-content active" id="job-url">
+                    <label for="urlInput">Link to Job Posting</label>
+                    <input type="url" id="urlInput" placeholder="https://example.com/job..." />
+                </div>
+                
+                <div class="tab-content" id="job-desc">
+                    <label for="descInput">Paste Job Description</label>
+                    <textarea id="descInput" placeholder="Paste the full job description here..." rows="4"></textarea>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group half">
+                    <label for="roleInput">Target Role (Optional)</label>
+                    <input type="text" id="roleInput" placeholder="e.g. Senior Frontend Engineer" />
+                </div>
+                <div class="form-group half">
+                    <label for="modelInput">AI Model</label>
+                    <input type="text" id="modelInput" placeholder="gemma4:latest" value="gemma4:latest" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Source Documents</label>
+                <div class="helper-text">Add the absolute paths to directories containing your CVs or letters.</div>
+                <div id="sources-list" class="dynamic-inputs">
+                    <div class="input-row">
+                        <input type="text" class="source-path" placeholder="/home/user/documents/cv..." required />
+                        <button type="button" class="btn-icon remove-btn" aria-label="Remove path">×</button>
+                    </div>
+                </div>
+                <button type="button" class="btn-secondary" id="add-source-btn">+ Add Path</button>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group half">
+                    <label for="outDirInput">Output Directory (Optional)</label>
+                    <input type="text" id="outDirInput" placeholder="/home/user/cover-letters" />
+                </div>
+                <div class="form-group half checkbox-group">
+                    <label>&nbsp;</label>
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="exportPdfCheck" checked>
+                        Export as PDF
+                        <span class="checkmark"></span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-row" id="pdf-fields-container">
+                <div class="form-group half">
+                    <label for="nameInput">Your Name</label>
+                    <input type="text" id="nameInput" placeholder="Jane Doe" />
+                </div>
+                <div class="form-group half">
+                    <label for="contactInput">Contact Info</label>
+                    <input type="text" id="contactInput" placeholder="jane.doe@example.com / 555-0100" />
+                </div>
+            </div>
+
+            <button type="submit" class="btn-primary" id="generate-btn">
+                <span class="btn-text">Generate Cover Letter</span>
+                <span class="loader hidden"></span>
+            </button>
+
+            <div id="text-result" class="hidden result-panel">
+                <div class="result-header">
+                    <h2>Cover Letter</h2>
+                    <button type="button" class="btn-secondary" id="copy-letter-btn" style="width:auto; margin:0;">Copy Text</button>
+                </div>
+                <pre id="letter-output" class="letter-output"></pre>
+                <div id="result-meta" class="save-msg hidden"></div>
+            </div>
+        </form>
+
+        <div id="editor-container" class="hidden">
+            <div class="result-header">
+                <h2>Interactive Canvas</h2>
+                <div style="display: flex; gap: 0.5rem;">
+                   <button type="button" class="btn-secondary" id="back-btn" style="width:auto; margin:0;">Back</button>
+                   <button type="button" class="btn-primary" id="save-pdf-btn" style="width:auto; margin:0;">Save PDF</button>
+                </div>
+            </div>
+            
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem; line-height: 1.4;">
+                <strong>Instructions:</strong> Use the toolbar below to style your text. Grab blocks on the canvas and drag them up or down to reorganize your layout before saving.
+            </p>
+
+            <div id="toolbar" class="formatting-toolbar">
+                <button type="button" data-cmd="bold" title="Bold"><b>B</b></button>
+                <button type="button" data-cmd="italic" title="Italic"><i>I</i></button>
+                <button type="button" data-cmd="underline" title="Underline"><u>U</u></button>
+                <span style="color: rgba(255,255,255,0.2)">|</span>
+                <select data-cmd="fontSize" title="Font Size">
+                    <option value="3">Normal</option>
+                    <option value="2">Small</option>
+                    <option value="5">Large (Header)</option>
+                    <option value="6">Massive</option>
+                </select>
+                <input type="color" data-cmd="foreColor" value="#000000" title="Text Color" class="color-picker" />
+                <span style="color: rgba(255,255,255,0.2)">|</span>
+                <button type="button" data-cmd="justifyLeft" title="Left Align">⬅️</button>
+                <button type="button" data-cmd="justifyCenter" title="Center Align">↔️</button>
+                <button type="button" data-cmd="justifyRight" title="Right Align">➡️</button>
+                <span style="color: rgba(255,255,255,0.2)">|</span>
+                <button type="button" id="add-text-block-btn" title="Add new block of text" style="border-color: var(--accent-color);">+ Text Block</button>
+            </div>
+            
+            <div class="canvas-wrapper">
+                <div id="pdf-canvas">
+                    <!-- Dynamic Blocks get injected here -->
+                </div>
+            </div>
+            
+            <div id="save-status" class="hidden save-msg"></div>
+        </div>
+
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>

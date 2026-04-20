@@ -1,0 +1,30 @@
+{
+  "sourcesDir": [
+    "<LOCAL_PATH_TO_APPLICATIONS_DIR>",
+    "<LOCAL_PATH_TO_CV_DIR>",
+    "<LOCAL_PATH_TO_MOTIVATIONAL_LETTERS_DIR>",
+    "https://example.com/portfolio"
+  ],
+  "model": "gemma4:latest",
+  "keepAlive": "10m",
+  "provider": "ollama",
+  "providerConfig": {}
+}
+
+// PROVIDER OPTIONS:
+// ================
+// "provider": "ollama" (default)
+//   - model: e.g. "gemma4:latest", "llama2", "neural-chat"
+//   - providerConfig: { "keep_alive": "10m" } (optional)
+//   - Requires Ollama running locally or at OLLAMA_BASE_URL
+//   - No API key needed
+//
+// "provider": "openai"
+//   - model: e.g. "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"
+//   - providerConfig: {} (optional, can add custom params in future)
+//   - Requires: OPENAI_API_KEY environment variable
+//
+// "provider": "anthropic"
+//   - model: e.g. "claude-3-opus-20240229", "claude-3-sonnet-20240229"
+//   - providerConfig: {} (optional, can add custom params in future)
+//   - Requires: ANTHROPIC_API_KEY environment variable
