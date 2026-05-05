@@ -12,6 +12,11 @@ from pathlib import Path
 from typing import Any
 from urllib.request import Request, urlopen
 
+try:
+    import requests
+except ImportError:
+    requests = None
+
 from .llm_provider import get_provider, parse_json_response
 
 logger = logging.getLogger(__name__)
@@ -177,9 +182,37 @@ def _read_text(path: Path) -> str:
 
 
 def _read_url_text(url: str) -> str:
-    req = Request(url, headers={"User-Agent": "Mozilla/5.0 (JobHunterAssistant/1.0)"})
-    with urlopen(req, timeout=20) as resp:
-        raw = resp.read().decode("utf-8", errors="ignore")
+    raw: str
+
+    # Some hosts (e.g. DocSend) reject urllib user agents with 403.
+    if requests is not None:
+        resp = requests.get(
+            url,
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+                ),
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Referer": "https://www.google.com/",
+            },
+            timeout=20,
+        )
+        resp.raise_for_status()
+        raw = resp.text
+    else:
+        req = Request(
+            url,
+            headers={
+                "User-Agent": (
+                    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+                )
+            },
+        )
+        with urlopen(req, timeout=20) as resp:
+            raw = resp.read().decode("utf-8", errors="ignore")
 
     # Best effort: for HTML pages, reduce boilerplate to visible text.
     if "<html" in raw.lower() or "<body" in raw.lower():
@@ -332,11 +365,7 @@ def _parse_job_text(text: str, source: str, paths: SourcePaths) -> JobInfo:
 
 def fetch_job(url: str, paths: SourcePaths) -> JobInfo:
     logger.debug(f"Fetching job from URL: {url}")
-    req = Request(url, headers={"User-Agent": "Mozilla/5.0 (JobHunterAssistant/1.0)"})
-    with urlopen(req, timeout=20) as resp:
-        raw = resp.read().decode("utf-8", errors="ignore")
-
-    cleaned = _extract_job_text(raw)
+    cleaned = _read_url_text(url)
     return _parse_job_text(cleaned, source=url, paths=paths)
 
 
@@ -350,6 +379,7 @@ def draft_cover_letter(
     job: JobInfo,
     paths: SourcePaths,
     role_override: str | None = None,
+    prompt_notes: str | None = None,
 ) -> str:
     provider = get_provider(
         paths.provider,
@@ -367,31 +397,94 @@ def draft_cover_letter(
     voice_samples = pdata.get("voice_samples", [])[:4]
     voice_block = "\n".join(f"- {line}" for line in voice_samples)
     reqs = "\n".join(f"- {r}" for r in job.requirements[:6])
+    user_notes = prompt_notes.strip() if prompt_notes else ""
+    notes_lower = user_notes.lower()
+    mode = "cover_letter"
+    if "upwork" in notes_lower or "proposal" in notes_lower or "freelance" in notes_lower:
+        mode = "upwork"
+    elif any(token in notes_lower for token in ["email", "e-mail", "mail format"]):
+        mode = "email"
+    elif "cover letter" in notes_lower or "cover-letter" in notes_lower:
+        mode = "cover_letter"
+    user_overrides_block = (
+        f"\nUSER OVERRIDES (these take priority over all default instructions below):\n"
+        f"{user_notes}\n"
+        if user_notes
+        else ""
+    )
+    word_count_instruction = (
+        "- Length and format must follow the user overrides above; ignore the 220-320 word default if they conflict\n"
+        if user_notes
+        else "- 220-320 words total\n"
+    )
+    if mode == "upwork":
+        format_instruction = (
+            "- Output format: Upwork proposal message (not a traditional cover letter)\n"
+            "- Start with a short client-facing greeting\n"
+            "- Focus on relevant fit, how you would approach the work, and confidence of delivery\n"
+            "- Keep it concise, practical, and human\n"
+            "- Avoid corporate cover-letter phrasing\n"
+        )
+        salutation_instruction = "- Use a platform-style opening suitable for Upwork clients\n"
+    elif mode == "email":
+        format_instruction = (
+            "- Output format: professional email expressing interest (not a traditional cover letter)\n"
+            "- Include a short 'Subject:' line at the top\n"
+            "- Use a concise email body with greeting, 1-3 short paragraphs, and sign-off\n"
+            "- Keep it brief and skimmable\n"
+        )
+        salutation_instruction = "- Use an email-style greeting and sign-off appropriate for the company context\n"
+    else:
+        format_instruction = "- Output format: traditional cover letter\n"
+        salutation_instruction = "- Salutation: 'Dear Hiring Team,'\n"
+
+    structure_instruction = (
+        "- Structure: short paragraphs only, no bullet points\n"
+        if mode in {"cover_letter", "email"}
+        else "- Structure: 2-4 short paragraphs; bullets are allowed only if they improve clarity\n"
+    )
+
+    role_label = (
+        "Upwork project"
+        if mode == "upwork"
+        else "application role"
+    )
     prompt = (
-        f"Write a tailored professional cover letter.\n\n"
+        f"Write a tailored professional application message for this opportunity.\n\n"
+        f"OUTPUT MODE: {mode}\n\n"
         f"CANDIDATE:\n"
         f"- Identity: {identity}\n"
         f"- Key achievements: {achievements}\n"
         f"- Skills: {skills}\n"
         f"- Writing tone: {tone}\n\n"
         f"VOICE EXAMPLES (style anchors from candidate's own writing):\n{voice_block}\n\n"
-        f"TARGET ROLE: {role_text}\n"
+        f"TARGET {role_label.upper()}: {role_text}\n"
         f"COMPANY: {job.company}\n"
-        f"REQUIREMENTS:\n{reqs}\n\n"
+        f"REQUIREMENTS:\n{reqs}\n"
+        f"{user_overrides_block}\n"
         f"INSTRUCTIONS:\n"
-        f"- Salutation: 'Dear Hiring Team,'\n"
+        f"{format_instruction}"
+        f"{salutation_instruction}"
         f"- Open with specific motivation for this role at {job.company}\n"
         f"- Reference 2-3 achievements most relevant to the requirements listed\n"
         f"- Mirror the candidate's natural writing tone and sentence rhythm from the voice examples\n"
+        f"- Use first-person voice and include at least one concrete detail (metric, tool, project, or outcome)\n"
         f"- Keep wording human, specific, and personal; avoid generic AI-sounding phrases\n"
         f"- Do NOT use phrases like: 'deep-seated belief', 'catalyst for', 'I am writing to express', 'I am confident that'\n"
+        f"- Avoid clichés and filler: 'passionate', 'thrilled', 'dynamic', 'fast-paced environment', 'leverage', 'synergy'\n"
         f"- Prefer short to medium sentences and concrete language over grand abstractions\n"
-        f"- 220-320 words total\n"
-        f"- Plain paragraphs only, no bullet points or section headers inside the letter\n"
+        f"{word_count_instruction}"
+        f"{structure_instruction}"
+        f"- Final pass before returning: rewrite any sentence that sounds generic, robotic, or templated\n"
         f"- Close with a brief confident call to action\n"
         f"- Return only the letter text, nothing else"
     )
-    return provider.chat(prompt)
+    system_prompt = (
+        "You are an expert career writer who produces natural, specific, human-sounding job applications. "
+        "Do not sound like an AI assistant. Prefer concrete facts over polished fluff. "
+        "Write like a real person who knows their own work."
+    )
+    return provider.chat(prompt, system=system_prompt)
 
 
 def save_cover_letter(content: str, company: str, output_dir: Path) -> Path:

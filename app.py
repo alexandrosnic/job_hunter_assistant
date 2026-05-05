@@ -61,6 +61,7 @@ class GenerateRequest(BaseModel):
     job_url: Optional[str] = None
     job_text: Optional[str] = None
     role: Optional[str] = None
+    prompt_notes: Optional[str] = None
     model: str = "gemma4:latest"
     keep_alive: str = "10m"
     provider: str = "ollama"
@@ -159,6 +160,7 @@ def generate_cover_letter(req: GenerateRequest, _: None = Depends(verify_api_key
             job,
             paths,
             role_override=req.role,
+            prompt_notes=req.prompt_notes,
         )
         logger.info(f"Cover letter drafted ({len(letter)} chars)")
     except RuntimeError as e:

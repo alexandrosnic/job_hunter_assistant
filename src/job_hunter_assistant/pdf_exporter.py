@@ -68,6 +68,17 @@ def save_cover_letter_pdf(
     pdf.set_margins(left=margins["left"], top=margins["top"], right=margins["right"])
     pdf.set_auto_page_break(auto=True, margin=margins["bottom"])
 
+    usable_w = pdf.w - margins["left"] - margins["right"]
+    date_month_year = datetime.date.today().strftime("%B %Y")
+    display_company = company if company and company.strip() else "Company"
+
+    # Top header row: company (left) | Month Year (right)
+    pdf.set_font(h_cfg["font"], style="B", size=h_cfg["size"])
+    pdf.cell(w=usable_w * 0.6, h=0.25, txt=display_company, align="L")
+    pdf.cell(w=usable_w * 0.4, h=0.25, txt=date_month_year, new_x="LMARGIN", new_y="NEXT", align="R")
+
+    pdf.ln(0.1)
+
     # Name header
     pdf.set_font(h_cfg["font"], style="B" if h_cfg["bold"] else "", size=h_cfg["size"])
     display_name = name if name and name.strip() else "Candidate Name"
@@ -79,12 +90,6 @@ def save_cover_letter_pdf(
     pdf.cell(w=0, h=0.25, txt=display_contact, new_x="LMARGIN", new_y="NEXT", align=c_cfg["align"])
 
     pdf.ln(d_cfg["spacing_before"])
-
-    # Date
-    pdf.set_font(d_cfg["font"], style="B" if d_cfg["bold"] else "", size=d_cfg["size"])
-    date_str = datetime.date.today().strftime("%B %d, %Y")
-    pdf.cell(w=0, h=0.2, txt=date_str, new_x="LMARGIN", new_y="NEXT")
-    pdf.ln(d_cfg["spacing_after"])
 
     # Body
     pdf.set_font(b_cfg["font"], size=b_cfg["size"])

@@ -83,6 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (localStorage.getItem('jh_name')) document.getElementById('nameInput').value = localStorage.getItem('jh_name');
     if (localStorage.getItem('jh_contact')) document.getElementById('contactInput').value = localStorage.getItem('jh_contact');
     if (localStorage.getItem('jh_role')) document.getElementById('roleInput').value = localStorage.getItem('jh_role');
+    if (localStorage.getItem('jh_prompt_notes')) document.getElementById('promptNotesInput').value = localStorage.getItem('jh_prompt_notes');
     if (localStorage.getItem('jh_outdir')) document.getElementById('outDirInput').value = localStorage.getItem('jh_outdir');
     if (localStorage.getItem('jh_style')) document.getElementById('styleSelect').value = localStorage.getItem('jh_style');
     
@@ -111,6 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const jobUrl = activeTab === 'job-url' ? document.getElementById('urlInput').value.trim() : null;
         const jobDesc = activeTab === 'job-desc' ? document.getElementById('descInput').value.trim() : null;
         const role = document.getElementById('roleInput').value.trim();
+        const promptNotes = document.getElementById('promptNotesInput').value.trim();
         const model = document.getElementById('modelInput').value.trim() || 'gemma4:latest';
         
         // Output and PDF options
@@ -139,6 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('jh_contact', candidateContact);
         localStorage.setItem('jh_style', templateStyle);
         localStorage.setItem('jh_role', role);
+        localStorage.setItem('jh_prompt_notes', promptNotes);
         localStorage.setItem('jh_outdir', outDir);
         localStorage.setItem('jh_sources', JSON.stringify(sources));
 
@@ -159,6 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 job_url: jobUrl,
                 job_text: jobDesc,
                 role: role,
+                prompt_notes: promptNotes,
                 model: model,
                 keep_alive: '10m',
                 output_dir: outDir,

@@ -4,6 +4,7 @@ fastapi==0.104.1
 uvicorn==0.24.0
 fpdf2==2.7.0
 python-dotenv==1.0.0
+requests>=2.31.0
 
 # Optional LLM provider dependencies (install as needed)
 # openai>=1.0.0         # For OpenAI API support
